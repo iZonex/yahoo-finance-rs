@@ -1,0 +1,69 @@
+[package]
+name = "yfinance"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.75"
+description = "Async Rust client for Yahoo Finance — quotes, OHLCV history, fundamentals, holders, options, search. Port of the Python yfinance library."
+authors = ["yfinance-rust contributors"]
+license = "Apache-2.0"
+repository = "https://github.com/iZonex/yfinance-rust"
+homepage = "https://github.com/iZonex/yfinance-rust"
+documentation = "https://docs.rs/yfinance"
+readme = "README.md"
+keywords = ["yahoo", "finance", "stocks", "ohlcv", "quotes"]
+categories = ["api-bindings", "finance", "asynchronous"]
+exclude = ["/.github", "/tests/fixtures", "*.png"]
+
+[features]
+default = ["rustls-tls"]
+# TLS backend selection (mutually exclusive in practice — pick one).
+rustls-tls = ["reqwest/rustls-tls"]
+native-tls = ["reqwest/native-tls"]
+# Enable network-touching integration tests.
+integration-tests = []
+
+[dependencies]
+async-trait = "0.1"
+bytes = "1"
+chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = { version = "0.10", features = ["serde"] }
+futures = "0.3"
+log = "0.4"
+parking_lot = "0.12"
+rand = "0.8"
+reqwest = { version = "0.12", default-features = false, features = ["json", "gzip", "cookies", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+tokio = { version = "1", features = ["sync", "time", "macros", "rt"] }
+url = "2"
+
+[dev-dependencies]
+anyhow = "1"
+env_logger = "0.11"
+httpmock = "0.7"
+tokio = { version = "1", features = ["full"] }
+
+[[example]]
+name = "ticker_history"
+path = "examples/ticker_history.rs"
+
+[[example]]
+name = "ticker_info"
+path = "examples/ticker_info.rs"
+
+[[example]]
+name = "download_multi"
+path = "examples/download_multi.rs"
+
+[[example]]
+name = "search"
+path = "examples/search.rs"
+
+[[example]]
+name = "options_chain"
+path = "examples/options_chain.rs"
+
+[package.metadata.docs.rs]
+all-features = false
+rustdoc-args = ["--cfg", "docsrs"]

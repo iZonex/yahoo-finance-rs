@@ -1,0 +1,12 @@
+yfinance-rust
+Copyright 2026 yfinance-rust contributors
+
+This product is a Rust port of the Python library `yfinance`
+(https://github.com/ranaroussi/yfinance), originally authored by Ran Aroussi
+and contributors and licensed under the Apache License, Version 2.0.
+
+This product is not affiliated, endorsed, or vetted by Yahoo, Inc. It is an
+open-source tool that uses Yahoo's publicly available APIs and is intended
+for research and educational purposes.
+
+Yahoo!, Y!Finance, and Yahoo! Finance are registered trademarks of Yahoo, Inc.
