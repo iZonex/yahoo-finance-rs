@@ -3,7 +3,7 @@
 use serde_json::Value;
 
 use crate::client::YfClient;
-use crate::error::{Error, Result};
+use crate::error::Result;
 
 /// Aggregate of all holder-related modules from `quoteSummary`.
 #[derive(Debug, Clone, Default)]
@@ -108,43 +108,10 @@ const HOLDERS_MODULES: &[&str] = &[
 
 impl Holders {
     pub(crate) async fn fetch(client: &YfClient, symbol: &str) -> Result<Self> {
-        #[derive(serde::Deserialize)]
-        struct Envelope {
-            #[serde(rename = "quoteSummary")]
-            quote_summary: Inner,
-        }
-        #[derive(serde::Deserialize)]
-        struct Inner {
-            #[serde(default)]
-            result: Vec<serde_json::Map<String, Value>>,
-            #[serde(default)]
-            error: Option<Value>,
-        }
-
-        let path = format!(
-            "/v10/finance/quoteSummary/{}",
-            crate::info::history_percent(symbol)
-        );
-        let q = vec![
-            ("modules", HOLDERS_MODULES.join(",")),
-            ("formatted", "false".to_string()),
-            ("corsDomain", "finance.yahoo.com".to_string()),
-        ];
-        let env: Envelope = client.get_json_crumb(&path, &q).await?;
-        if let Some(err) = env.quote_summary.error {
-            return Err(Error::Yahoo {
-                symbol: symbol.to_string(),
-                code: "holders_error".into(),
-                description: err.to_string(),
-            });
-        }
-        let modules = env
-            .quote_summary
-            .result
-            .into_iter()
-            .next()
+        let modules = client
+            .fetch_quote_summary(symbol, &HOLDERS_MODULES.join(","), "holders_quoteSummary")
+            .await?
             .unwrap_or_default();
-
         Ok(parse_holders(symbol, modules))
     }
 }

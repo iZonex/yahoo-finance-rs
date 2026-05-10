@@ -1,0 +1,34 @@
+{
+  "quoteSummary": {
+    "result": [
+      {
+        "earnings": {
+          "maxAge": 86400,
+          "earningsChart": {
+            "quarterly": [
+              { "date": "1Q2024", "actual": { "raw": 1.53, "fmt": "1.53" }, "estimate": { "raw": 1.5, "fmt": "1.50" } },
+              { "date": "2Q2024", "actual": { "raw": 1.4, "fmt": "1.40" }, "estimate": { "raw": 1.34, "fmt": "1.34" } },
+              { "date": "3Q2024", "actual": { "raw": 1.64, "fmt": "1.64" }, "estimate": { "raw": 1.6, "fmt": "1.60" } },
+              { "date": "4Q2024", "actual": { "raw": 2.4, "fmt": "2.40" }, "estimate": { "raw": 2.35, "fmt": "2.35" } }
+            ]
+          },
+          "financialsChart": {
+            "yearly": [
+              { "date": 2021, "revenue": { "raw": 365817000000, "fmt": "365.82B" }, "earnings": { "raw": 94680000000, "fmt": "94.68B" } },
+              { "date": 2022, "revenue": { "raw": 394328000000, "fmt": "394.33B" }, "earnings": { "raw": 99803000000, "fmt": "99.80B" } },
+              { "date": 2023, "revenue": { "raw": 383285000000, "fmt": "383.29B" }, "earnings": { "raw": 96995000000, "fmt": "96.99B" } },
+              { "date": 2024, "revenue": { "raw": 391035000000, "fmt": "391.04B" }, "earnings": { "raw": 93736000000, "fmt": "93.74B" } }
+            ],
+            "quarterly": [
+              { "date": "1Q2024", "revenue": { "raw": 90753000000, "fmt": "90.75B" }, "earnings": { "raw": 23636000000, "fmt": "23.64B" } },
+              { "date": "2Q2024", "revenue": { "raw": 85777000000, "fmt": "85.78B" }, "earnings": { "raw": 21448000000, "fmt": "21.45B" } },
+              { "date": "3Q2024", "revenue": { "raw": 94930000000, "fmt": "94.93B" }, "earnings": { "raw": 14736000000, "fmt": "14.74B" } },
+              { "date": "4Q2024", "revenue": { "raw": 124300000000, "fmt": "124.30B" }, "earnings": { "raw": 36330000000, "fmt": "36.33B" } }
+            ]
+          }
+        }
+      }
+    ],
+    "error": null
+  }
+}

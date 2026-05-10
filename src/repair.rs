@@ -260,7 +260,7 @@ fn rolling_median_close(rows: &[OhlcvRow], window: usize) -> Vec<f64> {
         }
         buf.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
         let mid = buf.len() / 2;
-        *slot = if buf.len() % 2 == 0 {
+        *slot = if buf.len().is_multiple_of(2) {
             0.5 * (buf[mid - 1] + buf[mid])
         } else {
             buf[mid]

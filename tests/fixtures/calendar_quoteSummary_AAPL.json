@@ -1,0 +1,22 @@
+{
+  "quoteSummary": {
+    "result": [
+      {
+        "calendarEvents": {
+          "earnings": {
+            "earningsDate": [
+              { "raw": 1722556800, "fmt": "2024-08-01" },
+              { "raw": 1722643200, "fmt": "2024-08-02" }
+            ],
+            "earningsAverage": { "raw": 1.35, "fmt": "1.35" },
+            "earningsLow": { "raw": 1.32, "fmt": "1.32" },
+            "earningsHigh": { "raw": 1.38, "fmt": "1.38" }
+          },
+          "exDividendDate": { "raw": 1715212800, "fmt": "2024-05-09" },
+          "dividendDate": { "raw": 1715817600, "fmt": "2024-05-16" }
+        }
+      }
+    ],
+    "error": null
+  }
+}

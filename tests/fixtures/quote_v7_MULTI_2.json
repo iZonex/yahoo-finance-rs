@@ -1,0 +1,39 @@
+{
+  "quoteResponse": {
+    "result": [
+      {
+        "symbol": "AAPL",
+        "quoteType": "EQUITY",
+        "currency": "USD",
+        "exchange": "NMS",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 195.42,
+        "regularMarketVolume": 48217600,
+        "regularMarketPreviousClose": 193.6,
+        "regularMarketOpen": 194.13,
+        "regularMarketDayHigh": 196.02,
+        "regularMarketDayLow": 193.4,
+        "fiftyTwoWeekHigh": 220.0,
+        "fiftyTwoWeekLow": 164.08,
+        "marketCap": 3022000000000
+      },
+      {
+        "symbol": "MSFT",
+        "quoteType": "EQUITY",
+        "currency": "USD",
+        "exchange": "NMS",
+        "exchangeTimezoneName": "America/New_York",
+        "regularMarketPrice": 432.18,
+        "regularMarketVolume": 19384210,
+        "regularMarketPreviousClose": 430.55,
+        "regularMarketOpen": 431.05,
+        "regularMarketDayHigh": 434.0,
+        "regularMarketDayLow": 430.5,
+        "fiftyTwoWeekHigh": 470.0,
+        "fiftyTwoWeekLow": 309.45,
+        "marketCap": 3210000000000
+      }
+    ],
+    "error": null
+  }
+}

@@ -43,32 +43,82 @@
 #![warn(missing_debug_implementations)]
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
+pub mod analysis;
+pub mod calendar;
 pub mod client;
+#[cfg(feature = "dataframe")]
+pub mod dataframe;
 pub mod domain;
 pub mod download;
+pub mod earnings;
 pub mod error;
+pub mod esg;
 pub mod fundamentals;
 pub mod history;
 pub mod holders;
 pub mod info;
+pub mod isin;
 pub mod lookup;
+pub mod news;
 pub mod options;
+pub mod profile;
 pub mod quote;
 pub mod repair;
 pub mod search;
+pub mod shares;
+#[cfg(feature = "stream")]
+pub mod stream;
 pub mod ticker;
 pub mod types;
 
-pub use client::{YfClient, YfClientBuilder};
+pub mod test_fixtures;
+
+pub(crate) mod wire;
+
+/// Forward our internal `log` events to the `tracing` ecosystem. Idempotent
+/// — safe to call multiple times. No-op without the `tracing` feature.
+#[cfg(feature = "tracing")]
+pub fn init_tracing_bridge() {
+    let _ = tracing_log::LogTracer::init();
+}
+
+/// Initialise a default `tracing-subscriber` for tests / examples. Reads
+/// `RUST_LOG` for the env-filter and falls back to `info`. Available with
+/// the `tracing-subscriber` feature.
+#[cfg(feature = "tracing-subscriber")]
+pub fn init_tracing_for_tests() {
+    use tracing_subscriber::{fmt, EnvFilter};
+    init_tracing_bridge();
+    let filter = std::env::var("RUST_LOG")
+        .ok()
+        .and_then(|s| EnvFilter::try_new(s).ok())
+        .unwrap_or_else(|| EnvFilter::new("info"));
+    let _ = fmt::Subscriber::builder()
+        .with_env_filter(filter)
+        .with_target(true)
+        .try_init();
+}
+
+pub use analysis::{
+    EarningsEstimate, EarningsTrendRow, EpsRevisions, EpsTrend, PriceTarget, RecommendationRow,
+    RecommendationSummary, RevenueEstimate, UpgradeDowngradeRow,
+};
+pub use calendar::Calendar;
+pub use client::{ApiPreference, CacheMode, RetryConfig, YfClient, YfClientBuilder};
 pub use domain::{Industry, Market, Sector};
 pub use download::{download, DownloadBuilder, MultiHistory};
+pub use earnings::{Earnings, EarningsEps, EarningsQuarter, EarningsYear};
 pub use error::{Error, Result};
+pub use esg::{EsgInvolvement, EsgScores, EsgSummary};
 pub use history::{Action, History, HistoryBuilder, OhlcvRow};
 pub use info::Info;
 pub use lookup::{Lookup, LookupBuilder, LookupRow, LookupType};
+pub use news::{NewsArticle, NewsBuilder, NewsTab};
 pub use options::{OptionChain, OptionContract};
-pub use quote::FastInfo;
+pub use profile::{Address, CompanyProfile, FundProfile, Profile};
+pub use quote::{batch as batch_quotes, FastInfo, Quote};
 pub use repair::{repair_history, RepairReport};
 pub use search::{Search, SearchBuilder, SearchNews, SearchQuote};
+pub use shares::ShareCount;
 pub use ticker::Ticker;
 pub use types::{Interval, Period};

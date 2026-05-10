@@ -1,10 +1,15 @@
-# yfinance-rust
+# yahoo-finance-rs
 
-[![CI](https://github.com/iZonex/yfinance-rust/actions/workflows/ci.yml/badge.svg)](https://github.com/iZonex/yfinance-rust/actions/workflows/ci.yml)
+[![CI](https://github.com/iZonex/yahoo-finance-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/iZonex/yahoo-finance-rs/actions/workflows/ci.yml)
+[![Crates.io](https://img.shields.io/crates/v/yahoo-finance-rs.svg)](https://crates.io/crates/yahoo-finance-rs)
+[![Docs.rs](https://docs.rs/yahoo-finance-rs/badge.svg)](https://docs.rs/yahoo-finance-rs)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 Async Rust client for Yahoo Finance — a port of the Python
 [`yfinance`](https://github.com/ranaroussi/yfinance) library.
+
+> The crate is published as **`yahoo-finance-rs`** on crates.io. The library
+> name is **`yfinance`**, so user code reads `use yfinance::Ticker;`.
 
 > **Disclaimer.** This crate is not affiliated, endorsed, or vetted by Yahoo, Inc.
 > It uses Yahoo's publicly available APIs and is intended for research and
@@ -14,17 +19,50 @@ Async Rust client for Yahoo Finance — a port of the Python
 
 ## Features
 
-- **Historical OHLCV** with auto-adjust, back-adjust, dividends and splits.
-- **Quote / fast info** — single-call price, volume, 52w range, market cap.
+### Core data
+- **Historical OHLCV** with auto-adjust, back-adjust, dividends, splits, capital gains.
+- **Quote** (full snapshot — bid/ask, market state, pre/post prices) and **`fast_info`** (compact subset).
+- **Batch quotes** — many symbols in one HTTP request via [`batch_quotes`].
 - **Full info** via `quoteSummary` (sector, industry, business summary, ratios).
 - **Fundamentals** — annual & quarterly income statement, balance sheet, cash flow.
-- **Holders** — major / institutional / mutual-fund / insider transactions.
-- **Options chain** — expirations, calls and puts with greeks-adjacent fields.
-- **Search & lookup** — typeahead-style symbol resolution.
-- **Multi-ticker `download`** with bounded concurrency.
-- **Domain** — Market summary, Sector and Industry taxonomy.
-- Cookie + crumb session, per-request retries with exponential backoff,
-  rotating User-Agent.
+- **Earnings** — yearly + quarterly revenue/earnings totals plus EPS estimate-vs-actual.
+- **Calendar** — upcoming earnings, ex-dividend, dividend payment dates.
+- **Shares outstanding** — annual + quarterly historical timeseries.
+
+### Analysis
+- **Recommendations**, **recommendation summary**, **upgrades/downgrades**, **price targets**, **earnings trend**.
+- **ESG / sustainability** scores and involvement flags.
+
+### Ownership
+- Major / institutional / mutual-fund / insider transactions / insider roster / net share-purchase activity.
+
+### Surface
+- **Options chain** — expirations + calls + puts.
+- **News** — `latestNews` / `newsAll` / `pressRelease` with [`NewsTab`].
+- **Profile** — company / fund profile with HTML scrape fallback.
+- **Search**, **lookup**, **ISIN** lookup.
+- **Sector / Industry / Market** taxonomy.
+
+### Real-time
+- **WebSocket streaming** (protobuf) and **HTTP polling** with `diff_only` and per-update volume deltas (feature `stream`).
+
+### Developer experience
+- Async API (`tokio` + `reqwest`), high-level `Ticker` with builders.
+- Cookie + crumb session, **per-request retries** with exponential backoff, rotating User-Agent.
+- **In-memory cache** (`CacheMode::Use`/`Refresh`/`Bypass`, opt-in via `client.cache_ttl(...)`).
+- **`tracing` feature** — bridges internal `log` events into the `tracing` ecosystem.
+- **Polars `DataFrame`** conversions for History, downloads, recommendations, news, holders, … (feature `dataframe`).
+- **Fixture-based offline tests** — record once with `YF_RECORD=1`, replay forever.
+
+## Optional features
+
+| Feature | Pulls in | Enables |
+| --- | --- | --- |
+| `stream` | `prost`, `tokio-tungstenite`, `futures-util`, `base64` | `Ticker::stream()`, `StreamBuilder` |
+| `dataframe` | `polars` | `ToDataFrame` trait + impls |
+| `tracing` | `tracing`, `tracing-log` | Forward `log` events to `tracing` |
+| `tracing-subscriber` | also `tracing-subscriber` | `init_tracing_for_tests()` |
+| `test-mode` | – | Fixture recording when `YF_RECORD=1` |
 
 ## Quick start
 
@@ -32,8 +70,14 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-yfinance = "0.1"
+yahoo-finance-rs = "0.1"
 tokio = { version = "1", features = ["full"] }
+```
+
+Or with cargo:
+
+```bash
+cargo add yahoo-finance-rs tokio --features tokio/full
 ```
 
 ### History (OHLCV)

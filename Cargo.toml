@@ -1,18 +1,35 @@
 [package]
-name = "yfinance"
+name = "yahoo-finance-rs"
 version = "0.1.0"
 edition = "2021"
-rust-version = "1.75"
+rust-version = "1.88"
 description = "Async Rust client for Yahoo Finance — quotes, OHLCV history, fundamentals, holders, options, search. Port of the Python yfinance library."
 authors = ["yfinance-rust contributors"]
 license = "Apache-2.0"
-repository = "https://github.com/iZonex/yfinance-rust"
-homepage = "https://github.com/iZonex/yfinance-rust"
-documentation = "https://docs.rs/yfinance"
+repository = "https://github.com/iZonex/yahoo-finance-rs"
+homepage = "https://github.com/iZonex/yahoo-finance-rs"
+documentation = "https://docs.rs/yahoo-finance-rs"
 readme = "README.md"
 keywords = ["yahoo", "finance", "stocks", "ohlcv", "quotes"]
 categories = ["api-bindings", "finance", "asynchronous"]
-exclude = ["/.github", "/tests/fixtures", "*.png"]
+include = [
+    "src/**",
+    "examples/**",
+    "Cargo.toml",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "CODE_OF_CONDUCT.md",
+    "SECURITY.md",
+]
+
+# The crate is published under `yahoo-finance-rs` on crates.io but the library
+# name remains `yfinance` so user code keeps `use yfinance::...`.
+[lib]
+name = "yfinance"
+path = "src/lib.rs"
 
 [features]
 default = ["rustls-tls"]
@@ -21,6 +38,19 @@ rustls-tls = ["reqwest/rustls-tls"]
 native-tls = ["reqwest/native-tls"]
 # Enable network-touching integration tests.
 integration-tests = []
+# Compile in fixture-recording helpers. Combined with `YF_RECORD=1`, the HTTP
+# layer dumps response bodies to `tests/fixtures/` for replay in offline tests.
+test-mode = []
+# Real-time quote streaming (WebSocket primary, HTTP polling fallback).
+stream = ["dep:base64", "dep:futures-util", "dep:prost", "dep:tokio-tungstenite", "tokio/rt-multi-thread"]
+# Polars DataFrame conversions for History, downloads, recommendations, …
+dataframe = ["dep:polars"]
+# Bridge our internal `log` calls to the `tracing` ecosystem and let
+# downstream apps subscribe to events.
+tracing = ["dep:tracing", "dep:tracing-log"]
+# Dev convenience: also pull in `tracing-subscriber` and expose
+# `init_tracing_for_tests()` for examples and integration tests.
+tracing-subscriber = ["tracing", "dep:tracing-subscriber"]
 
 [dependencies]
 async-trait = "0.1"
@@ -37,6 +67,18 @@ serde_json = "1"
 thiserror = "1"
 tokio = { version = "1", features = ["sync", "time", "macros", "rt"] }
 url = "2"
+# Streaming dependencies — only pulled in with `--features stream`.
+base64 = { version = "0.22", optional = true }
+futures-util = { version = "0.3", optional = true }
+prost = { version = "0.13", optional = true }
+tokio-tungstenite = { version = "0.24", default-features = false, features = ["connect", "rustls-tls-native-roots"], optional = true }
+# DataFrame integration — only pulled in with `--features dataframe`.
+polars = { version = "0.51", default-features = false, features = ["dtype-datetime"], optional = true }
+# Structured logging via the `tracing` ecosystem — only pulled in with
+# `--features tracing` (or `--features tracing-subscriber` for the dev helper).
+tracing = { version = "0.1", optional = true }
+tracing-subscriber = { version = "0.3", default-features = false, features = ["fmt", "env-filter", "std"], optional = true }
+tracing-log = { version = "0.2", default-features = false, features = ["log-tracer", "std"], optional = true }
 
 [dev-dependencies]
 anyhow = "1"
@@ -63,6 +105,11 @@ path = "examples/search.rs"
 [[example]]
 name = "options_chain"
 path = "examples/options_chain.rs"
+
+[[example]]
+name = "polars_dataframes"
+path = "examples/polars_dataframes.rs"
+required-features = ["dataframe"]
 
 [package.metadata.docs.rs]
 all-features = false

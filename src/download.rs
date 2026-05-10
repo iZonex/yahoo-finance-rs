@@ -39,6 +39,7 @@ pub struct DownloadBuilder {
     rounding: bool,
     repair: bool,
     concurrency: usize,
+    cache_mode: crate::client::CacheMode,
 }
 
 impl DownloadBuilder {
@@ -62,7 +63,17 @@ impl DownloadBuilder {
             rounding: false,
             repair: false,
             concurrency: 8,
+            cache_mode: crate::client::CacheMode::Use,
         }
+    }
+
+    /// Per-request cache override (effective when the client has
+    /// [`YfClientBuilder::cache_ttl`] set).
+    ///
+    /// [`YfClientBuilder::cache_ttl`]: crate::YfClientBuilder::cache_ttl
+    pub fn cache_mode(mut self, mode: crate::client::CacheMode) -> Self {
+        self.cache_mode = mode;
+        self
     }
 
     /// Use a relative period.
@@ -168,7 +179,8 @@ impl DownloadBuilder {
                     .back_adjust(cfg.back_adjust)
                     .keepna(cfg.keepna)
                     .rounding(cfg.rounding)
-                    .repair(cfg.repair);
+                    .repair(cfg.repair)
+                    .cache_mode(cfg.cache_mode);
                 (sym, b.fetch().await)
             });
         }
@@ -200,6 +212,7 @@ impl DownloadBuilder {
             keepna: self.keepna,
             rounding: self.rounding,
             repair: self.repair,
+            cache_mode: self.cache_mode,
         }
     }
 }
@@ -215,6 +228,7 @@ struct DownloadConfig {
     back_adjust: bool,
     keepna: bool,
     repair: bool,
+    cache_mode: crate::client::CacheMode,
     rounding: bool,
 }
 

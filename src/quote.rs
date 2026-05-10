@@ -71,24 +71,109 @@ pub struct FastInfo {
     pub shares: Option<u64>,
 }
 
-impl FastInfo {
+/// Richer quote snapshot — same wire payload as [`FastInfo`] but exposes the
+/// micro-structure fields (bid/ask/sizes, market state, change since prior
+/// close) that `FastInfo` deliberately omits.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Quote {
+    /// Symbol echoed back.
+    pub symbol: String,
+    /// Quote type (`EQUITY`, `ETF`, …).
+    #[serde(default)]
+    pub quote_type: Option<String>,
+    /// Market state (`REGULAR`, `PRE`, `POST`, `CLOSED`).
+    #[serde(default, rename = "marketState")]
+    pub market_state: Option<String>,
+    /// ISO currency code.
+    #[serde(default)]
+    pub currency: Option<String>,
+    /// Exchange code (`NMS`, …).
+    #[serde(default)]
+    pub exchange: Option<String>,
+    /// Exchange display name.
+    #[serde(default, rename = "fullExchangeName")]
+    pub exchange_name: Option<String>,
+    /// IANA timezone (`America/New_York`).
+    #[serde(default, rename = "exchangeTimezoneName")]
+    pub timezone: Option<String>,
+
+    /// Last regular-session price.
+    #[serde(default, rename = "regularMarketPrice")]
+    pub price: Option<f64>,
+    /// Day-over-day change.
+    #[serde(default, rename = "regularMarketChange")]
+    pub change: Option<f64>,
+    /// Day-over-day change as a fraction-of-100 percentage.
+    #[serde(default, rename = "regularMarketChangePercent")]
+    pub change_percent: Option<f64>,
+    /// Last trade timestamp (UNIX seconds).
+    #[serde(default, rename = "regularMarketTime")]
+    pub time: Option<i64>,
+    /// Cumulative session volume.
+    #[serde(default, rename = "regularMarketVolume")]
+    pub volume: Option<u64>,
+    /// Today's opening price.
+    #[serde(default, rename = "regularMarketOpen")]
+    pub open: Option<f64>,
+    /// Highest price today.
+    #[serde(default, rename = "regularMarketDayHigh")]
+    pub day_high: Option<f64>,
+    /// Lowest price today.
+    #[serde(default, rename = "regularMarketDayLow")]
+    pub day_low: Option<f64>,
+    /// Previous trading day's close.
+    #[serde(default, rename = "regularMarketPreviousClose")]
+    pub previous_close: Option<f64>,
+
+    /// Best bid price.
+    #[serde(default)]
+    pub bid: Option<f64>,
+    /// Bid size (lots / 100-share units depending on exchange).
+    #[serde(default, rename = "bidSize")]
+    pub bid_size: Option<i64>,
+    /// Best ask price.
+    #[serde(default)]
+    pub ask: Option<f64>,
+    /// Ask size.
+    #[serde(default, rename = "askSize")]
+    pub ask_size: Option<i64>,
+    /// Size of the last trade.
+    #[serde(default, rename = "regularMarketLastSize")]
+    pub last_size: Option<i64>,
+
+    /// Pre-market price (only outside regular hours).
+    #[serde(default, rename = "preMarketPrice")]
+    pub pre_market_price: Option<f64>,
+    /// Pre-market change.
+    #[serde(default, rename = "preMarketChange")]
+    pub pre_market_change: Option<f64>,
+    /// Post-market (after-hours) price.
+    #[serde(default, rename = "postMarketPrice")]
+    pub post_market_price: Option<f64>,
+    /// Post-market change.
+    #[serde(default, rename = "postMarketChange")]
+    pub post_market_change: Option<f64>,
+}
+
+impl Quote {
     pub(crate) async fn fetch(client: &YfClient, symbol: &str) -> Result<Self> {
         #[derive(Deserialize)]
-        struct QuoteResponseEnvelope {
+        struct Envelope {
             #[serde(rename = "quoteResponse")]
-            quote_response: QuoteResponse,
+            quote_response: Inner,
         }
         #[derive(Deserialize)]
-        struct QuoteResponse {
+        struct Inner {
             #[serde(default)]
-            result: Vec<FastInfo>,
+            result: Vec<Quote>,
             #[serde(default)]
             error: Option<serde_json::Value>,
         }
-
-        let path = "/v7/finance/quote";
         let q = vec![("symbols", symbol.to_string())];
-        let env: QuoteResponseEnvelope = client.get_json_crumb(path, &q).await?;
+        let env: Envelope = client
+            .get_json_crumb("/v7/finance/quote", &q, Some(("quote_v7", symbol)))
+            .await?;
         if let Some(err) = env.quote_response.error {
             return Err(Error::Yahoo {
                 symbol: symbol.to_string(),
@@ -105,6 +190,61 @@ impl FastInfo {
                 reason: "quote endpoint returned no results".into(),
             })
     }
+}
+
+impl FastInfo {
+    pub(crate) async fn fetch(client: &YfClient, symbol: &str) -> Result<Self> {
+        let mut rows = fetch_many(client, std::slice::from_ref(&symbol)).await?;
+        rows.pop().ok_or_else(|| Error::TickerMissing {
+            ticker: symbol.to_string(),
+            reason: "quote endpoint returned no results".into(),
+        })
+    }
+}
+
+/// Fetch quotes for many symbols in a single `/v7/finance/quote` call.
+///
+/// Symbols Yahoo doesn't recognise are silently dropped. Returns rows in the
+/// order Yahoo emits them (typically request order).
+pub async fn batch(client: &YfClient, symbols: &[&str]) -> Result<Vec<FastInfo>> {
+    if symbols.is_empty() {
+        return Ok(Vec::new());
+    }
+    fetch_many(client, symbols).await
+}
+
+async fn fetch_many(client: &YfClient, symbols: &[&str]) -> Result<Vec<FastInfo>> {
+    #[derive(Deserialize)]
+    struct QuoteResponseEnvelope {
+        #[serde(rename = "quoteResponse")]
+        quote_response: QuoteResponse,
+    }
+    #[derive(Deserialize)]
+    struct QuoteResponse {
+        #[serde(default)]
+        result: Vec<FastInfo>,
+        #[serde(default)]
+        error: Option<serde_json::Value>,
+    }
+
+    let csv = symbols.join(",");
+    let label = if symbols.len() == 1 {
+        symbols[0].to_string()
+    } else {
+        format!("MULTI_{}", symbols.len())
+    };
+    let q = vec![("symbols", csv)];
+    let env: QuoteResponseEnvelope = client
+        .get_json_crumb("/v7/finance/quote", &q, Some(("quote_v7", &label)))
+        .await?;
+    if let Some(err) = env.quote_response.error {
+        return Err(Error::Yahoo {
+            symbol: symbols.join(","),
+            code: "quote_error".into(),
+            description: err.to_string(),
+        });
+    }
+    Ok(env.quote_response.result)
 }
 
 #[cfg(test)]

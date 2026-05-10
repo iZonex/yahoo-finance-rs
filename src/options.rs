@@ -119,9 +119,11 @@ impl OptionExpirations {
     pub(crate) async fn fetch(client: &YfClient, symbol: &str) -> Result<Self> {
         let path = format!(
             "/v7/finance/options/{}",
-            crate::info::history_percent(symbol)
+            crate::client::YfClient::path_encode(symbol)
         );
-        let env: Envelope = client.get_json(&path, &[]).await?;
+        let env: Envelope = client
+            .get_json_crumb(&path, &[], Some(("options_v7", symbol)))
+            .await?;
         check_error(&env, symbol)?;
         let r = env
             .option_chain
@@ -148,13 +150,16 @@ impl OptionChain {
     ) -> Result<Self> {
         let path = format!(
             "/v7/finance/options/{}",
-            crate::info::history_percent(symbol)
+            crate::client::YfClient::path_encode(symbol)
         );
         let q = match expiration {
             Some(d) => vec![("date", d.to_string())],
             None => vec![],
         };
-        let env: Envelope = client.get_json(&path, &q).await?;
+        let label = expiration.map_or_else(|| symbol.to_string(), |d| format!("{symbol}_{d}"));
+        let env: Envelope = client
+            .get_json_crumb(&path, &q, Some(("options_v7", &label)))
+            .await?;
         check_error(&env, symbol)?;
         let r = env
             .option_chain

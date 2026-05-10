@@ -1,0 +1,44 @@
+{
+  "timeseries": {
+    "result": [
+      {
+        "meta": {
+          "symbol": ["AAPL"],
+          "type": ["annualBasicAverageShares"]
+        },
+        "timestamp": [1601424000, 1632960000, 1664496000, 1696032000],
+        "annualBasicAverageShares": [
+          {
+            "dataId": 80045,
+            "asOfDate": "2020-09-26",
+            "periodType": "12M",
+            "currencyCode": "USD",
+            "reportedValue": { "raw": 17352119000, "fmt": "17.35B" }
+          },
+          {
+            "dataId": 80045,
+            "asOfDate": "2021-09-25",
+            "periodType": "12M",
+            "currencyCode": "USD",
+            "reportedValue": { "raw": 16864919000, "fmt": "16.86B" }
+          },
+          {
+            "dataId": 80045,
+            "asOfDate": "2022-09-24",
+            "periodType": "12M",
+            "currencyCode": "USD",
+            "reportedValue": { "raw": 16215963000, "fmt": "16.22B" }
+          },
+          {
+            "dataId": 80045,
+            "asOfDate": "2023-09-30",
+            "periodType": "12M",
+            "currencyCode": "USD",
+            "reportedValue": { "raw": 15744231000, "fmt": "15.74B" }
+          }
+        ]
+      }
+    ],
+    "error": null
+  }
+}

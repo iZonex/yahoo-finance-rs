@@ -1,0 +1,62 @@
+name: Bug report
+description: Something doesn't work as documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. The more concrete the repro, the faster we can fix it.
+        For security issues, please use [SECURITY.md](../blob/main/SECURITY.md) instead.
+
+  - type: input
+    id: version
+    attributes:
+      label: Crate version
+      description: Output of `cargo pkgid yahoo-finance-rs` or the version pinned in your `Cargo.toml`.
+      placeholder: "0.1.0"
+    validations:
+      required: true
+
+  - type: input
+    id: rustc
+    attributes:
+      label: Rust toolchain
+      description: Output of `rustc --version`.
+      placeholder: "rustc 1.78.0 (stable)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Minimal reproduction
+      description: A small, self-contained snippet that triggers the bug. Include the symbol, period, and interval if relevant.
+      render: rust
+      placeholder: |
+        let client = YfClient::builder().build()?;
+        let ticker = Ticker::new(client, "AAPL");
+        let history = ticker.history(Period::Mo1, Interval::D1).await?;
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened instead
+      description: Error messages, panics, or wrong output. Paste raw, don't paraphrase.
+    validations:
+      required: true
+
+  - type: textarea
+    id: yahoo
+    attributes:
+      label: Yahoo response (if available)
+      description: If you can capture the raw JSON Yahoo returned (e.g. via `RUST_LOG=yfinance=debug`), paste it here.
+      render: json

@@ -86,7 +86,7 @@ impl Fundamentals {
 
         let path = format!(
             "/ws/fundamentals-timeseries/v1/finance/timeseries/{}",
-            crate::info::history_percent(symbol)
+            crate::client::YfClient::path_encode(symbol)
         );
         let q = vec![
             ("symbol", symbol.to_string()),
@@ -99,7 +99,9 @@ impl Fundamentals {
             ("region", "US".into()),
         ];
 
-        let raw: TimeseriesEnvelope = client.get_json_crumb(&path, &q).await?;
+        let raw: TimeseriesEnvelope = client
+            .get_json_crumb(&path, &q, Some(("fundamentals_timeseries", symbol)))
+            .await?;
         if let Some(err) = raw.timeseries.error {
             return Err(Error::Yahoo {
                 symbol: symbol.to_string(),

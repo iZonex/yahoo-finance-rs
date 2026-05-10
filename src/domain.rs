@@ -59,7 +59,11 @@ impl Market {
         }
         let q = vec![("region", region.clone()), ("lang", "en-US".into())];
         let env: Envelope = client
-            .get_json("/v6/finance/quote/marketSummary", &q)
+            .get_json(
+                "/v6/finance/quote/marketSummary",
+                &q,
+                Some(("market_summary", &region)),
+            )
             .await?;
         if let Some(err) = env.response.error {
             return Err(Error::Yahoo {
@@ -155,51 +159,15 @@ async fn fetch_taxonomy(
     key: &str,
     kind: &str,
 ) -> Result<serde_json::Map<String, Value>> {
-    #[derive(Debug, Deserialize)]
-    struct Envelope {
-        #[serde(rename = "quoteSummary")]
-        quote_summary: Inner,
-    }
-    #[derive(Debug, Deserialize)]
-    struct Inner {
-        #[serde(default)]
-        result: Vec<serde_json::Map<String, Value>>,
-        #[serde(default)]
-        error: Option<Value>,
-    }
-    let path = format!(
-        "/v10/finance/quoteSummary/{}",
-        crate::info::history_percent(key)
-    );
-    let module = if kind == "sector" {
-        "sector"
-    } else {
-        "industry"
-    };
-    let q = vec![
-        ("modules", module.to_string()),
-        ("formatted", "false".into()),
-        ("corsDomain", "finance.yahoo.com".into()),
-    ];
-    let env: Envelope = client.get_json_crumb(&path, &q).await?;
-    if let Some(err) = env.quote_summary.error {
-        return Err(Error::Yahoo {
-            symbol: key.to_string(),
-            code: format!("{kind}_error"),
-            description: err.to_string(),
-        });
-    }
-    let modules =
-        env.quote_summary
-            .result
-            .into_iter()
-            .next()
-            .ok_or_else(|| Error::TickerMissing {
-                ticker: key.to_string(),
-                reason: format!("{kind} returned empty result"),
-            })?;
+    let modules = client
+        .fetch_quote_summary(key, kind, "domain_quoteSummary")
+        .await?
+        .ok_or_else(|| Error::TickerMissing {
+            ticker: key.to_string(),
+            reason: format!("{kind} returned empty result"),
+        })?;
     Ok(modules
-        .get(module)
+        .get(kind)
         .and_then(|v| v.as_object())
         .cloned()
         .unwrap_or_default())

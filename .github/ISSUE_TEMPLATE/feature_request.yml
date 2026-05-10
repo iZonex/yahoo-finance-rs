@@ -1,0 +1,38 @@
+name: Feature request
+description: Propose a new endpoint, type, or behavior.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Most features in this crate are ports of the upstream Python `yfinance`
+        library. Linking the equivalent Python API (or the underlying Yahoo
+        endpoint) makes review much faster.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: What can't you do today, and what would you do with the new feature?
+    validations:
+      required: true
+
+  - type: input
+    id: upstream
+    attributes:
+      label: Upstream `yfinance` API or Yahoo endpoint
+      description: e.g. `Ticker.recommendations` or `https://query1.finance.yahoo.com/v10/finance/quoteSummary/AAPL`
+      placeholder: "Ticker.<method>  /  v10/finance/<endpoint>"
+
+  - type: textarea
+    id: sketch
+    attributes:
+      label: API sketch (optional)
+      description: A rough idea of how the Rust API could look. Not binding — happy to discuss.
+      render: rust
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Workarounds you've tried, or other shapes of API you considered.

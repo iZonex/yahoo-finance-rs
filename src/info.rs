@@ -5,14 +5,14 @@
 //! commonly-consumed fields into [`Info`]. The raw module tree is preserved as
 //! [`Info::raw`] so callers can dig deeper.
 
-use serde::Deserialize;
 use serde_json::Value;
 
 use crate::client::YfClient;
 use crate::error::{Error, Result};
 
-/// Default modules requested by [`Info::fetch`] — equivalent to the union
-/// fetched by Python `yfinance` when `Ticker.info` is accessed.
+/// Default modules requested by [`Ticker::info`](crate::Ticker::info) —
+/// equivalent to the union fetched by Python `yfinance` when `Ticker.info`
+/// is accessed.
 pub const DEFAULT_MODULES: &[&str] = &[
     "summaryProfile",
     "summaryDetail",
@@ -86,44 +86,13 @@ impl Info {
 
     /// Fetch a custom subset of `quoteSummary` modules.
     pub async fn fetch_modules(client: &YfClient, symbol: &str, modules: &[&str]) -> Result<Self> {
-        #[derive(Debug, Deserialize)]
-        struct Envelope {
-            #[serde(rename = "quoteSummary")]
-            quote_summary: QuoteSummary,
-        }
-        #[derive(Debug, Deserialize)]
-        struct QuoteSummary {
-            #[serde(default)]
-            result: Vec<serde_json::Map<String, Value>>,
-            #[serde(default)]
-            error: Option<Value>,
-        }
-
-        let path = format!("/v10/finance/quoteSummary/{}", history_percent(symbol));
-        let q: Vec<(&str, String)> = vec![
-            ("modules", modules.join(",")),
-            ("formatted", "false".to_string()),
-            ("corsDomain", "finance.yahoo.com".to_string()),
-        ];
-
-        let env: Envelope = client.get_json_crumb(&path, &q).await?;
-        if let Some(err) = env.quote_summary.error {
-            return Err(Error::Yahoo {
-                symbol: symbol.to_string(),
-                code: "quoteSummary_error".into(),
-                description: err.to_string(),
-            });
-        }
-        let modules_map =
-            env.quote_summary
-                .result
-                .into_iter()
-                .next()
-                .ok_or_else(|| Error::TickerMissing {
-                    ticker: symbol.to_string(),
-                    reason: "quoteSummary returned empty result".into(),
-                })?;
-
+        let modules_map = client
+            .fetch_quote_summary(symbol, &modules.join(","), "info_quoteSummary")
+            .await?
+            .ok_or_else(|| Error::TickerMissing {
+                ticker: symbol.to_string(),
+                reason: "quoteSummary returned empty result".into(),
+            })?;
         Ok(flatten_info(symbol, modules_map))
     }
 }
@@ -199,19 +168,6 @@ fn flatten_info(symbol: &str, modules: serde_json::Map<String, Value>) -> Info {
         raw: modules,
     }
 }
-
-// Re-export the percent encoder from history without making it public API.
-mod history_percent_re {
-    pub(crate) fn percent(s: &str) -> String {
-        s.chars()
-            .map(|c| match c {
-                'A'..='Z' | 'a'..='z' | '0'..='9' | '.' | '-' | '=' | '^' | '_' => c.to_string(),
-                _ => format!("%{:02X}", c as u32),
-            })
-            .collect()
-    }
-}
-pub(crate) use history_percent_re::percent as history_percent;
 
 #[cfg(test)]
 mod tests {

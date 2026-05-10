@@ -147,6 +147,7 @@ pub struct HistoryBuilder {
     keepna: bool,
     rounding: bool,
     repair: bool,
+    cache_mode: crate::client::CacheMode,
 }
 
 impl HistoryBuilder {
@@ -164,7 +165,17 @@ impl HistoryBuilder {
             keepna: false,
             rounding: false,
             repair: false,
+            cache_mode: crate::client::CacheMode::Use,
         }
+    }
+
+    /// Override the cache mode for this request. Effective only when the
+    /// client has [`YfClientBuilder::cache_ttl`] set.
+    ///
+    /// [`YfClientBuilder::cache_ttl`]: crate::YfClientBuilder::cache_ttl
+    pub fn cache_mode(mut self, mode: crate::client::CacheMode) -> Self {
+        self.cache_mode = mode;
+        self
     }
 
     /// Use a relative period (mutually exclusive with `start`/`end`).
@@ -267,24 +278,22 @@ impl HistoryBuilder {
             }
         }
 
-        let path = format!("/v8/finance/chart/{}", percent_encode(&self.symbol));
-        let raw: ChartResponse = self.client.get_json(&path, &q).await?;
+        let path = format!("/v8/finance/chart/{}", YfClient::path_encode(&self.symbol));
+        let raw: ChartResponse = self
+            .client
+            .get_json_cached(
+                &path,
+                &q,
+                Some(("history_chart", &self.symbol)),
+                self.cache_mode,
+            )
+            .await?;
         let mut history = parse_chart(&self.symbol, raw, &self)?;
         if self.repair {
             history.repair();
         }
         Ok(history)
     }
-}
-
-fn percent_encode(s: &str) -> String {
-    // Symbols are alphanumeric + a few characters (`. - = ^`) — encode the rest.
-    s.chars()
-        .map(|c| match c {
-            'A'..='Z' | 'a'..='z' | '0'..='9' | '.' | '-' | '=' | '^' | '_' => c.to_string(),
-            _ => format!("%{:02X}", c as u32),
-        })
-        .collect()
 }
 
 // ---------------- raw chart payload ----------------

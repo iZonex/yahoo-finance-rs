@@ -125,7 +125,17 @@ impl<'a> SearchBuilder<'a> {
             ("lang", "en-US".to_string()),
             ("region", "US".to_string()),
         ];
-        let env: Envelope = self.client.get_json("/v1/finance/search", &q).await?;
+        let env: Envelope = self
+            .client
+            .get_json(
+                "/v1/finance/search",
+                &q,
+                Some((
+                    "search",
+                    crate::test_fixtures::safe_label(&self.query).as_str(),
+                )),
+            )
+            .await?;
         Ok(Search {
             query: self.query,
             quotes: env.quotes,

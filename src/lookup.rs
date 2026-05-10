@@ -147,7 +147,15 @@ impl<'a> LookupBuilder<'a> {
             ("fetchPricingData", self.fetch_pricing_data.to_string()),
         ];
 
-        let env: Envelope = self.client.get_json("/v1/finance/lookup", &q).await?;
+        let label = format!(
+            "{}_{}",
+            self.kind.as_str(),
+            crate::test_fixtures::safe_label(&self.query)
+        );
+        let env: Envelope = self
+            .client
+            .get_json("/v1/finance/lookup", &q, Some(("lookup", &label)))
+            .await?;
         let rows = env
             .finance
             .result
