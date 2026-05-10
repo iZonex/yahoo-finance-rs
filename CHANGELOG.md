@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-05-10
+
+### Documentation
+
+- README rewritten to match the actual 0.1 surface — adds quickstart, the
+  full per-`Ticker` method list, snippets for streaming / dataframes / cache
+  / browser-session injection, accurate architecture table, MSRV note (1.88).
+- `[package.metadata.docs.rs]` now builds with `stream`, `dataframe`, and
+  `tracing-subscriber` enabled so docs.rs renders the optional API surface.
+
 ## [0.1.0] - 2026-05-10
 
 Initial public release. Async Rust port of the Python `yfinance` library, with
