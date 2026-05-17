@@ -77,6 +77,10 @@ pub struct History {
     pub timezone: Option<String>,
     /// Exchange display name (`"NasdaqGS"`, …).
     pub exchange_name: Option<String>,
+    /// First trade / listing date reported by Yahoo (`meta.firstTradeDate`).
+    /// Useful for detecting recently-listed symbols. `None` when Yahoo omits
+    /// it (some indices, funds, or sparse responses).
+    pub first_trade_date: Option<DateTime<Utc>>,
     /// Bars in chronological order.
     pub rows: Vec<OhlcvRow>,
     /// Standalone events (dividends/splits/capital gains).
@@ -340,6 +344,10 @@ pub(crate) struct ChartMeta {
     pub(crate) exchange_timezone: Option<String>,
     #[serde(rename = "exchangeName", default)]
     pub(crate) exchange_name: Option<String>,
+    /// First trade date in UNIX seconds. Yahoo's `v8/finance/chart` `meta`
+    /// carries it as `firstTradeDate`.
+    #[serde(rename = "firstTradeDate", default)]
+    pub(crate) first_trade_date: Option<i64>,
 }
 
 #[derive(Debug, Default, Deserialize)]
@@ -539,11 +547,16 @@ pub(crate) fn parse_chart(
         | Action::CapitalGain { date, .. } => *date,
     });
 
+    let first_trade_date = meta
+        .first_trade_date
+        .and_then(|s| Utc.timestamp_opt(s, 0).single());
+
     Ok(History {
         symbol: meta.symbol.unwrap_or_else(|| symbol.to_string()),
         currency: meta.currency,
         timezone: meta.exchange_timezone,
         exchange_name: meta.exchange_name,
+        first_trade_date,
         rows,
         actions,
     })
@@ -598,7 +611,8 @@ mod tests {
                         "symbol": symbol,
                         "currency": "USD",
                         "exchangeName": "NMS",
-                        "exchangeTimezoneName": "America/New_York"
+                        "exchangeTimezoneName": "America/New_York",
+                        "firstTradeDate": 345_479_400_i64
                     },
                     "timestamp": [1_700_000_000_i64, 1_700_086_400_i64],
                     "indicators": {
@@ -647,6 +661,46 @@ mod tests {
         // close was 101 -> 50.5 (factor 0.5). open should also halve.
         assert!((h.rows[0].open - 50.0).abs() < 1e-6);
         assert!((h.rows[0].close - 50.5).abs() < 1e-6);
+    }
+
+    #[test]
+    fn parses_first_trade_date_from_meta() {
+        let raw = fixture("AAPL");
+        let h = parse_chart("AAPL", raw, &default_cfg().auto_adjust(false)).unwrap();
+        let first = h.first_trade_date.expect("firstTradeDate should parse");
+        assert_eq!(first, Utc.timestamp_opt(345_479_400, 0).single().unwrap());
+    }
+
+    #[test]
+    fn first_trade_date_absent_is_none() {
+        // A meta block without `firstTradeDate` yields `None`, not an error.
+        let json = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "meta": {
+                        "symbol": "AAPL",
+                        "currency": "USD",
+                        "exchangeName": "NMS",
+                        "exchangeTimezoneName": "America/New_York"
+                    },
+                    "timestamp": [1_700_000_000_i64],
+                    "indicators": {
+                        "quote": [{
+                            "open":   [100.0],
+                            "high":   [101.5],
+                            "low":    [ 99.5],
+                            "close":  [101.0],
+                            "volume": [1000000]
+                        }],
+                        "adjclose": [{ "adjclose": [101.0] }]
+                    }
+                }],
+                "error": null
+            }
+        });
+        let raw: ChartResponse = serde_json::from_value(json).unwrap();
+        let h = parse_chart("AAPL", raw, &default_cfg().auto_adjust(false)).unwrap();
+        assert!(h.first_trade_date.is_none());
     }
 
     #[test]

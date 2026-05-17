@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-05-17
+
+### Added
+
+- **First trade date**: `History` now exposes `first_trade_date:
+  Option<DateTime<Utc>>`, deserialized from the `firstTradeDate` field of
+  the `v8/finance/chart` `meta` block. Lets consumers detect recently-listed
+  symbols from a `Ticker::history()` response. `None` when Yahoo omits it.
+
 ## [0.1.1] - 2026-05-10
 
 ### Documentation

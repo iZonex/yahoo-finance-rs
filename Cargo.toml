@@ -1,6 +1,6 @@
 [package]
 name = "yahoo-finance-rs"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 rust-version = "1.88"
 description = "Async Rust client for Yahoo Finance — quotes, OHLCV history, fundamentals, holders, options, search. Port of the Python yfinance library."
