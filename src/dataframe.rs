@@ -308,6 +308,7 @@ mod tests {
                 },
             ],
             actions: vec![],
+            first_trade_date: None,
         }
     }
 
