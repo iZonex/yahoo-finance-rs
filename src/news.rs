@@ -1,10 +1,12 @@
 //! Yahoo Finance company-news feed.
 //!
-//! Wraps `https://finance.yahoo.com/xhr/ncp` (POST), which powers the news
-//! tabs on the ticker page. Returns recent editorial articles, the full feed
-//! including syndicated items, or only press releases — pick via [`NewsTab`].
+//! Wraps the GraphQL query (POST to `https://nexus-finance-prod.media.yahoo.com/`)
+//! behind the news tabs on the ticker page; Yahoo retired the older
+//! `finance.yahoo.com/xhr/ncp` in October 2026. Returns recent editorial
+//! articles, the full feed including syndicated items, or only press
+//! releases — pick via [`NewsTab`].
 
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::client::YfClient;
 use crate::error::{Error, Result};
@@ -22,14 +24,32 @@ pub enum NewsTab {
 }
 
 impl NewsTab {
-    fn as_query_ref(self) -> &'static str {
+    fn as_list(self) -> &'static str {
         match self {
-            NewsTab::LatestNews => "latestNews",
-            NewsTab::All => "newsAll",
-            NewsTab::PressReleases => "pressRelease",
+            NewsTab::LatestNews => "news",
+            NewsTab::All => "all",
+            NewsTab::PressReleases => "pressrelease",
         }
     }
 }
+
+/// The GraphQL query behind the news list on
+/// `finance.yahoo.com/quote/<symbol>/news/`. Assets resolve only when a
+/// field takes `$clientContext`; without one Yahoo returns `AssetError`
+/// for every item.
+const NEWS_QUERY: &str = r#"query FinanceTickerListNews($listInput: LightyearListInput!, $clientContext: ClientContext!, $mlRecsInput: MLRecsInput!, $gqlContext: [GqlContext] = [], $mlRecsFirst: Int) {
+  lightyearList: financeTickerList(list_input: $listInput, cc: $clientContext) {
+    main: mlRecsStream(mlRecsInput: $mlRecsInput, first: $mlRecsFirst) {
+      edges { node { asset(gqlContext: $gqlContext) {
+        __typename
+        ... on Story { id: uuid title previewUrl(cc: $clientContext) contentAttributes { ...Attrs } }
+        ... on Video { id: uuid title previewUrl(cc: $clientContext) contentAttributes { ...Attrs } }
+        ... on Outlink { id: uuid title: headline displayTime url provider { displayName } }
+      } } }
+    }
+  }
+}
+fragment Attrs on ContentAttributes { publishTime canonicalUrl provider { displayName } }"#;
 
 /// One news article.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,8 +62,8 @@ pub struct NewsArticle {
     pub publisher: Option<String>,
     /// Canonical URL to the article.
     pub link: Option<String>,
-    /// Publication time as UNIX seconds. `None` if Yahoo returned no `pubDate`
-    /// or it failed RFC3339 parsing.
+    /// Publication time as UNIX seconds. `None` if Yahoo returned no
+    /// publish time or it failed RFC3339 parsing.
     pub published_at: Option<i64>,
 }
 
@@ -101,31 +121,48 @@ impl NewsBuilder {
 
     /// Execute the request and return parsed articles.
     pub async fn fetch(self) -> Result<Vec<NewsArticle>> {
-        #[derive(Serialize)]
-        struct ServiceConfig<'a> {
-            #[serde(rename = "snippetCount")]
-            snippet_count: u32,
-            s: &'a [&'a str],
-        }
-        #[derive(Serialize)]
-        struct Payload<'a> {
-            #[serde(rename = "serviceConfig")]
-            service_config: ServiceConfig<'a>,
-        }
+        let slug = format!("list=finance-US-en-US-ticker-{}", self.tab.as_list());
+        let symbols = [self.symbol.as_str()];
+        // aboutnessWeight 0 ranks by recency alone, so items come back newest
+        // first (the news page itself mixes in relevance with 0.05).
+        let body = serde_json::json!({
+            "operationName": "FinanceTickerListNews",
+            "query": NEWS_QUERY,
+            "variables": {
+                "clientContext": {
+                    "device": "desktop", "lang": "en-US", "region": "US", "site": "finance"
+                },
+                "gqlContext": [{ "listAlias": slug }],
+                "listInput": {
+                    "disableDedupe": false,
+                    "enableBlockedContent": false,
+                    "enableQueryTimeLicenseCheck": true,
+                    "filterClientContext": false,
+                    "getFullList": true,
+                    "queryVariables": { "tickerSymbol": symbols },
+                    "slug": slug
+                },
+                "mlRecsInput": {
+                    "count": 200,
+                    "instance": "FINANCE",
+                    "rankInput": { "financeQuoteNewsV2": {
+                        "aboutnessWeight": 0,
+                        "boostDurationHours": 16,
+                        "halfLifeHours": 24,
+                        "recencyWeight": 1,
+                        "tickerSymbol": symbols
+                    } }
+                },
+                "mlRecsFirst": self.count
+            }
+        });
+        let req = self
+            .client
+            .news_post("/")
+            .header("x-yahoo-cg-client-name", "finance")
+            .json(&body);
 
-        let path = format!(
-            "/xhr/ncp?queryRef={}&serviceKey=ncp_fin",
-            self.tab.as_query_ref()
-        );
-        let body = Payload {
-            service_config: ServiceConfig {
-                snippet_count: self.count,
-                s: &[&self.symbol],
-            },
-        };
-        let req = self.client.news_post(&path).json(&body);
-
-        let label = format!("news_{}", self.tab.as_query_ref());
+        let label = format!("news_{}", self.tab.as_list());
         let Some(text) = self
             .client
             .send_text_recorded(req, Some((&label, &self.symbol)))
@@ -146,36 +183,75 @@ struct NewsEnvelope {
 
 #[derive(Deserialize)]
 struct NewsData {
-    #[serde(default, rename = "tickerStream")]
-    ticker_stream: Option<TickerStream>,
+    #[serde(default, rename = "lightyearList")]
+    list: Option<NewsList>,
 }
 
 #[derive(Deserialize)]
-struct TickerStream {
+struct NewsList {
     #[serde(default)]
-    stream: Option<Vec<StreamItem>>,
+    main: Option<NewsStream>,
 }
 
 #[derive(Deserialize)]
-struct StreamItem {
+struct NewsStream {
+    #[serde(default)]
+    edges: Vec<Edge>,
+}
+
+#[derive(Deserialize)]
+struct Edge {
+    #[serde(default)]
+    node: Option<Node>,
+}
+
+#[derive(Deserialize)]
+struct Node {
+    #[serde(default)]
+    asset: Option<Asset>,
+}
+
+/// Items Yahoo cannot serve come back as `AssetError` and are dropped.
+#[derive(Deserialize)]
+#[serde(tag = "__typename")]
+enum Asset {
+    Story(Article),
+    Video(Article),
+    Outlink(Outlink),
+    #[serde(other)]
+    Other,
+}
+
+#[derive(Deserialize)]
+struct Article {
     id: String,
     #[serde(default)]
-    content: Option<Content>,
-    /// When present, the item is a sponsored placement — drop it.
-    #[serde(default)]
-    ad: Option<serde_json::Value>,
+    title: Option<String>,
+    #[serde(default, rename = "contentAttributes")]
+    attrs: Option<Attrs>,
 }
 
 #[derive(Deserialize)]
-struct Content {
-    #[serde(default)]
-    title: Option<String>,
-    #[serde(default, rename = "pubDate")]
-    pub_date: Option<String>,
+struct Attrs {
+    #[serde(default, rename = "publishTime")]
+    publish_time: Option<String>,
+    #[serde(default, rename = "canonicalUrl")]
+    canonical_url: Option<String>,
     #[serde(default)]
     provider: Option<Provider>,
-    #[serde(default, rename = "canonicalUrl")]
-    canonical_url: Option<CanonicalUrl>,
+}
+
+#[derive(Deserialize)]
+struct Outlink {
+    id: String,
+    #[serde(default)]
+    title: Option<String>,
+    #[serde(default, rename = "displayTime")]
+    display_time: Option<String>,
+    #[serde(default)]
+    url: Option<String>,
+    #[serde(default)]
+    provider: Option<Provider>,
 }
 
 #[derive(Deserialize)]
@@ -184,39 +260,45 @@ struct Provider {
     display_name: Option<String>,
 }
 
-#[derive(Deserialize)]
-struct CanonicalUrl {
-    #[serde(default)]
-    url: Option<String>,
+fn unix_seconds(rfc3339: Option<&str>) -> Option<i64> {
+    rfc3339.and_then(|s| {
+        chrono::DateTime::parse_from_rfc3339(s)
+            .ok()
+            .map(|dt| dt.timestamp())
+    })
 }
 
 impl NewsEnvelope {
     fn into_articles(self) -> Vec<NewsArticle> {
-        let stream = self
+        let edges = self
             .data
-            .and_then(|d| d.ticker_stream)
-            .and_then(|t| t.stream)
+            .and_then(|d| d.list)
+            .and_then(|l| l.main)
+            .map(|m| m.edges)
             .unwrap_or_default();
-        stream
+        edges
             .into_iter()
-            .filter_map(|item| {
-                if item.ad.is_some() {
-                    return None;
+            .filter_map(|edge| match edge.node?.asset? {
+                Asset::Story(a) | Asset::Video(a) => {
+                    let attrs = a.attrs;
+                    Some(NewsArticle {
+                        uuid: a.id,
+                        title: a.title?,
+                        published_at: unix_seconds(
+                            attrs.as_ref().and_then(|c| c.publish_time.as_deref()),
+                        ),
+                        link: attrs.as_ref().and_then(|c| c.canonical_url.clone()),
+                        publisher: attrs.and_then(|c| c.provider).and_then(|p| p.display_name),
+                    })
                 }
-                let content = item.content?;
-                let title = content.title?;
-                let published_at = content.pub_date.as_deref().and_then(|s| {
-                    chrono::DateTime::parse_from_rfc3339(s)
-                        .ok()
-                        .map(|dt| dt.timestamp())
-                });
-                Some(NewsArticle {
-                    uuid: item.id,
-                    title,
-                    publisher: content.provider.and_then(|p| p.display_name),
-                    link: content.canonical_url.and_then(|u| u.url),
-                    published_at,
-                })
+                Asset::Outlink(o) => Some(NewsArticle {
+                    uuid: o.id,
+                    title: o.title?,
+                    published_at: unix_seconds(o.display_time.as_deref()),
+                    link: o.url,
+                    publisher: o.provider.and_then(|p| p.display_name),
+                }),
+                Asset::Other => None,
             })
             .collect()
     }
@@ -229,32 +311,38 @@ mod tests {
     #[test]
     fn parses_minimal_envelope() {
         let body = serde_json::json!({
-            "data": {
-                "tickerStream": {
-                    "stream": [
-                        {
-                            "id": "abc",
-                            "content": {
-                                "title": "Hello",
-                                "pubDate": "2025-05-01T12:00:00Z",
-                                "provider": { "displayName": "Reuters" },
-                                "canonicalUrl": { "url": "https://example.com/x" }
-                            }
-                        },
-                        {
-                            "id": "ad1",
-                            "ad": { "anything": true }
-                        }
-                    ]
-                }
-            }
+            "data": { "lightyearList": { "main": { "edges": [
+                { "node": { "asset": {
+                    "__typename": "Story",
+                    "id": "abc",
+                    "title": "Hello",
+                    "contentAttributes": {
+                        "publishTime": "2025-05-01T12:00:00Z",
+                        "canonicalUrl": "https://example.com/x",
+                        "provider": { "displayName": "Reuters" }
+                    }
+                } } },
+                { "node": { "asset": {
+                    "__typename": "Outlink",
+                    "id": "out",
+                    "title": "Elsewhere",
+                    "displayTime": "2025-05-01T13:00:00Z",
+                    "url": "https://example.com/y",
+                    "provider": { "displayName": "Barron's" }
+                } } },
+                { "node": { "asset": { "__typename": "AssetError" } } },
+                { "node": { "asset": null } }
+            ] } } }
         });
         let env: NewsEnvelope = serde_json::from_value(body).unwrap();
         let articles = env.into_articles();
-        assert_eq!(articles.len(), 1);
+        assert_eq!(articles.len(), 2);
         assert_eq!(articles[0].title, "Hello");
         assert_eq!(articles[0].publisher.as_deref(), Some("Reuters"));
+        assert_eq!(articles[0].link.as_deref(), Some("https://example.com/x"));
         assert_eq!(articles[0].published_at, Some(1_746_100_800));
+        assert_eq!(articles[1].link.as_deref(), Some("https://example.com/y"));
+        assert_eq!(articles[1].published_at, Some(1_746_104_400));
     }
 
     #[test]

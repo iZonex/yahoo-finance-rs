@@ -1,4 +1,4 @@
-//! Offline replay for `Ticker::news` (Yahoo `xhr/ncp`).
+//! Offline replay for `Ticker::news` (Yahoo's news GraphQL query).
 
 mod common;
 
@@ -7,7 +7,7 @@ use yfinance::{NewsTab, Ticker, YfClient};
 #[tokio::test]
 async fn offline_news_uses_recorded_fixture() {
     let symbol = "AAPL";
-    if !common::fixture_exists("news_latestNews", symbol, "json") {
+    if !common::fixture_exists("news_news", symbol, "json") {
         eprintln!(
             "skipping — record the fixture first with \
              `just test-record offline_news_uses_recorded_fixture`"
@@ -16,7 +16,7 @@ async fn offline_news_uses_recorded_fixture() {
     }
 
     let server = common::setup_server();
-    let mock = common::mock_news(&server, symbol, "latestNews");
+    let mock = common::mock_news(&server, symbol, "news");
 
     let client = YfClient::builder()
         .news_base_url(server.base_url())

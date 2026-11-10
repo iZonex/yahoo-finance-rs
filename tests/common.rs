@@ -150,12 +150,13 @@ pub fn mock_fundamentals_timeseries<'a>(server: &'a MockServer, symbol: &'a str)
 }
 
 #[must_use]
-pub fn mock_news<'a>(server: &'a MockServer, symbol: &'a str, query_ref: &'a str) -> Mock<'a> {
-    let endpoint = format!("news_{query_ref}");
+pub fn mock_news<'a>(server: &'a MockServer, symbol: &'a str, list: &'a str) -> Mock<'a> {
+    let endpoint = format!("news_{list}");
     server.mock(move |when, then| {
         when.method(httpmock::Method::POST)
-            .path("/xhr/ncp")
-            .query_param("queryRef", query_ref);
+            .path("/")
+            .header("x-yahoo-cg-client-name", "finance")
+            .body_contains(format!("list=finance-US-en-US-ticker-{list}"));
         then.status(200)
             .header("content-type", "application/json")
             .body(fixture(&endpoint, symbol, "json"));

@@ -40,7 +40,7 @@ pub(crate) const QUERY2_HOST: &str = "https://query2.finance.yahoo.com";
 pub(crate) const DEFAULT_ISIN_BASE: &str =
     "https://markets.businessinsider.com/ajax/SearchController_Suggest";
 /// Default base URL for Yahoo Finance's news XHR endpoint family.
-pub(crate) const DEFAULT_NEWS_BASE: &str = "https://finance.yahoo.com";
+pub(crate) const DEFAULT_NEWS_BASE: &str = "https://nexus-finance-prod.media.yahoo.com";
 /// Default base URL for the human-facing quote page (used by the profile
 /// scrape fallback).
 pub(crate) const DEFAULT_QUOTE_PAGE_BASE: &str = "https://finance.yahoo.com/quote";
@@ -254,8 +254,8 @@ impl YfClientBuilder {
         self
     }
 
-    /// Override the base URL of Yahoo's news XHR endpoint family
-    /// (default: `https://finance.yahoo.com`).
+    /// Override the base URL of Yahoo's news GraphQL endpoint
+    /// (default: `https://nexus-finance-prod.media.yahoo.com`).
     pub fn news_base_url(mut self, url: impl Into<String>) -> Self {
         self.news_base_url = Some(url.into());
         self

@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-11-10
+
+### Fixed
+
+- **News**: Yahoo retired `finance.yahoo.com/xhr/ncp` (it answers 404 since
+  October 2026), so `Ticker::news()` failed for every symbol. It now sends
+  the GraphQL query the quote page's news tab uses
+  (`nexus-finance-prod.media.yahoo.com`), newest first. `NewsTab` and
+  `NewsArticle` are unchanged; outlinks are returned too. The default
+  `news_base_url` moved with it.
+
 ## [0.1.2] - 2026-05-17
 
 ### Added

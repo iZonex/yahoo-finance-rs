@@ -21,8 +21,9 @@ async fn live_news_smoke() {
         .expect("live news");
 
     if !common::is_recording() {
-        // Yahoo is fickle — accept zero articles for symbols without coverage,
-        // but flag obviously-broken parses (e.g. a panic during dispatch).
-        assert!(articles.len() <= 50);
+        // AAPL always has coverage; an empty feed means the endpoint or the
+        // parser broke (Yahoo retired the old one with a quiet 404).
+        assert!(!articles.is_empty() && articles.len() <= 5);
+        assert!(articles.iter().all(|a| a.published_at.is_some()));
     }
 }

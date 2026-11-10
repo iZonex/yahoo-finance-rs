@@ -235,7 +235,7 @@ handshake. The cookie store is provided by `reqwest`'s built-in jar.
 | `src/esg.rs` | `quoteSummary?modules=esgScores` |
 | `src/holders.rs` | `quoteSummary` holders modules |
 | `src/options.rs` | `v7/finance/options` |
-| `src/news.rs` | `xhr/ncp` (POST) |
+| `src/news.rs` | `nexus-finance-prod.media.yahoo.com` GraphQL (POST) |
 | `src/profile.rs` | `quoteSummary` profile + HTML scrape fallback |
 | `src/isin.rs` | `markets.businessinsider.com/ajax/SearchController_Suggest` |
 | `src/search.rs` / `src/lookup.rs` | `v1/finance/search` / `v1/finance/lookup` |

@@ -1,0 +1,95 @@
+{
+ "data": {
+  "lightyearList": {
+   "main": {
+    "edges": [
+     {
+      "node": {
+       "asset": {
+        "__typename": "Video",
+        "id": "fe4a8897-2b85-42d0-a948-931ad304bd2f",
+        "title": "No chair and 30-year tenures: Will Nvidia's board go soft on Jensen?",
+        "previewUrl": null,
+        "contentAttributes": {
+         "publishTime": "2026-11-10T15:00:36Z",
+         "canonicalUrl": "https://finance.yahoo.com/video/no-chair-and-30-year-tenures-will-nvidias-board-go-soft-on-jensen-150036535.html",
+         "provider": {
+          "displayName": "Yahoo Finance Video"
+         }
+        }
+       }
+      }
+     },
+     {
+      "node": {
+       "asset": {
+        "__typename": "Story",
+        "id": "7df81b73-1ed3-3bc7-a3d7-2d202b92cb2b",
+        "title": "Jim Cramer questions his famous Nvidia investing rule",
+        "previewUrl": null,
+        "contentAttributes": {
+         "publishTime": "2026-11-10T17:46:32Z",
+         "canonicalUrl": "https://www.thestreet.com/investing/stocks/cramer-nvidia-investing-strategy-huang-scandal",
+         "provider": {
+          "displayName": "TheStreet"
+         }
+        }
+       }
+      }
+     },
+     {
+      "node": {
+       "asset": {
+        "__typename": "Story",
+        "id": "36afc7d8-35fb-316c-95b7-1a70b0f38eb9",
+        "title": "Apple Just Hit $5 Trillion. Its \u201cBiggest Competition\u201d Is a SpaceX Phone, Says Gene Munster",
+        "previewUrl": null,
+        "contentAttributes": {
+         "publishTime": "2026-11-10T17:39:51Z",
+         "canonicalUrl": "https://www.tikr.com/blog/apple-just-hit-5-trillion-its-biggest-competition-is-a-spacex-phone-says-gene-munster?ref=yahoofinance&tlnk=yf-261110-3p7pmqj7",
+         "provider": {
+          "displayName": "TIKR"
+         }
+        }
+       }
+      }
+     },
+     {
+      "node": {
+       "asset": {
+        "__typename": "Story",
+        "id": "80f18267-1dad-3383-97d1-cd9bb281649d",
+        "title": "TSMC Just Delivered the AI Growth Shock Wall Street Was Waiting For",
+        "previewUrl": null,
+        "contentAttributes": {
+         "publishTime": "2026-11-10T17:27:38Z",
+         "canonicalUrl": "https://finance.yahoo.com/technology/ai/articles/tsmc-just-delivered-ai-growth-172738565.html",
+         "provider": {
+          "displayName": "GuruFocus.com"
+         }
+        }
+       }
+      }
+     },
+     {
+      "node": {
+       "asset": {
+        "__typename": "Story",
+        "id": "c81d1046-8423-3136-a949-2314d088dd98",
+        "title": "Apple Is Holding Strong While Big Tech Sells Off. Is It Next?",
+        "previewUrl": null,
+        "contentAttributes": {
+         "publishTime": "2026-11-10T16:54:13Z",
+         "canonicalUrl": "https://www.fool.com/investing/2026/11/10/apple-is-holding-strong-big-tech-sells-off-next/",
+         "provider": {
+          "displayName": "Motley Fool"
+         }
+        }
+       }
+      }
+     }
+    ]
+   }
+  }
+ }
+}
